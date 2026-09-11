@@ -1,0 +1,167 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net481</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AssemblyName>HemiTweaks</AssemblyName>
+    <RootNamespace>HemiTweaks</RootNamespace>
+    <OutputType>Library</OutputType>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <!-- Where the game lives. Steam's default install location differs per OS, so each one gets its
+       own guess; override any of these with -p:ADOFAIPath=... (or -p:GameManagedPath=... when the
+       layout itself is unusual). Forward slashes work on every MSBuild host, including Windows. -->
+  <PropertyGroup>
+    <ADOFAIPath Condition="'$(ADOFAIPath)' == '' AND '$(OS)' == 'Windows_NT'">E:/SteamLibrary/steamapps/common/A Dance of Fire and Ice</ADOFAIPath>
+    <ADOFAIPath Condition="'$(ADOFAIPath)' == '' AND $([MSBuild]::IsOSPlatform('OSX'))">$(HOME)/Library/Application Support/Steam/steamapps/common/A Dance of Fire and Ice</ADOFAIPath>
+    <ADOFAIPath Condition="'$(ADOFAIPath)' == '' AND $([MSBuild]::IsOSPlatform('Linux'))">$(HOME)/.local/share/Steam/steamapps/common/A Dance of Fire and Ice</ADOFAIPath>
+
+    <!-- macOS ships the player inside an .app bundle, so the managed folder sits one level deeper
+         and is named differently. Windows and Linux both use "<product name>_Data". -->
+    <GameManagedPath Condition="'$(GameManagedPath)' == '' AND $([MSBuild]::IsOSPlatform('OSX'))">$(ADOFAIPath)/ADanceOfFireAndIce.app/Contents/Resources/Data/Managed</GameManagedPath>
+    <GameManagedPath Condition="'$(GameManagedPath)' == ''">$(ADOFAIPath)/A Dance of Fire and Ice_Data/Managed</GameManagedPath>
+
+    <!-- Compiled against net472 but the loader actually runs the net35 build (MelonLoader's log says
+         "Runtime Type: net35"), so an API that exists only in the newer profile still compiles here
+         and then throws at runtime. Keep to the net35 surface. -->
+    <MelonLoaderPath Condition="'$(MelonLoaderPath)' == ''">$(ADOFAIPath)/MelonLoader/net472</MelonLoaderPath>
+    <ModsPath Condition="'$(ModsPath)' == ''">$(ADOFAIPath)/Mods</ModsPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Framework assemblies the TUF browser needs: HTTP for the API, compression to unpack a
+         downloaded level. Both ship with .NET Framework but are not referenced by default. -->
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="MelonLoader">
+      <HintPath>$(MelonLoaderPath)/MelonLoader.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <!-- The game ships its own Newtonsoft.Json (13.0.2) in Managed and that is the copy the runtime
+           resolves, not MelonLoader's newer 13.0.4. Compiling against the game copy keeps the mod from
+           binding to an overload that does not exist at runtime (JToken.ToString(Formatting) did). -->
+      <HintPath>$(GameManagedPath)/Newtonsoft.Json.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(MelonLoaderPath)/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(GameManagedPath)/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>$(GameManagedPath)/Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="DOTween">
+      <HintPath>$(GameManagedPath)/DOTween.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="RDTools">
+      <HintPath>$(GameManagedPath)/RDTools.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="SkyHook.Unity">
+      <HintPath>$(GameManagedPath)/SkyHook.Unity.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(GameManagedPath)/Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>$(GameManagedPath)/UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.AudioModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.Physics2DModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.Physics2DModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextCoreFontEngineModule">
+      <HintPath>$(GameManagedPath)/UnityEngine.TextCoreFontEngineModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(GameManagedPath)/UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityFileDialog">
+      <HintPath>$(GameManagedPath)/UnityFileDialog.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- 7-Zip, one build per platform, so a level posted as .rar or .7z can be unpacked at all: the
+         runtime's own zip reader cannot open either. Stored gzipped because an embedded resource is
+         held uncompressed in the assembly, and these halve — 10.4 MB of executables become 4.8 MB.
+         To refresh them, drop the official 7-Zip binaries in and gzip each one in place:
+           7z.exe + 7z.dll (Windows), 7zz (macOS), 7zz (Linux), from https://www.7-zip.org/
+         TufArchives unpacks the pair for the running platform into UserData on first use. -->
+    <EmbeddedResource Include="resources/7zip/win64/7z.exe.gz"
+                      LogicalName="HemiTweaks.Resources.SevenZip.win64.7z.exe.gz" />
+    <EmbeddedResource Include="resources/7zip/win64/7z.dll.gz"
+                      LogicalName="HemiTweaks.Resources.SevenZip.win64.7z.dll.gz" />
+    <EmbeddedResource Include="resources/7zip/osx/7zz.gz"
+                      LogicalName="HemiTweaks.Resources.SevenZip.osx.7zz.gz" />
+    <EmbeddedResource Include="resources/7zip/linux64/7zz.gz"
+                      LogicalName="HemiTweaks.Resources.SevenZip.linux64.7zz.gz" />
+    <!-- The mod's own text. These are the base every language falls back to; the copies in
+         UserData/HemiTweaks/Lang are laid over them, so a mod update can add strings without
+         anyone having to touch their files. Adding a language is a new file in that folder. -->
+    <EmbeddedResource Include="resources/Lang/*.json">
+      <LogicalName>HemiTweaks.Resources.Lang.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+    <!-- The interface draws its own shapes, so the only assets left are the fonts: Noto Sans KR
+         for the interface (the Sketch draft's system-sans look; one weight, synthetic bold) and
+         MapleStory Bold for the in-game TileInfo labels, which keep their original face. -->
+    <EmbeddedResource Include="resources/Fonts\NotoSansKR-Regular.ttf"
+                      LogicalName="HemiTweaks.Resources.NotoSansKR.Regular.ttf" />
+    <EmbeddedResource Include="resources/Fonts\Maplestory OTF Bold.otf"
+                      LogicalName="HemiTweaks.Resources.MapleStory.Bold.otf" />
+    <Compile Remove="bootstrap/**/*.cs" />
+    <Compile Remove="local/**/*.cs" />
+    <Compile Remove="tools/**/*.cs" />
+    <Compile Remove="tests/**/*.cs" />
+    <!-- macOS leaves a "._name" sidecar beside every file it copies onto a non-Apple filesystem.
+         They hold nothing but Finder metadata, and they are binary, so the compiler stops on them:
+         "._KeyViewer.cs is a binary file". Removed here rather than deleted, because the project is
+         moved between macOS and Windows and they come back with every transfer. -->
+    <Compile Remove="**/._*.cs" />
+  </ItemGroup>
+
+  <!-- Only install when the game is actually where we think it is; otherwise a wrong ADOFAIPath used
+       to create a junk folder tree next to the project. Copy failures fail the build so a successful
+       build always means the installed mod was updated when deployment is enabled. -->
+  <Target Name="CopyToMelonLoaderMods" AfterTargets="Build" Condition="Exists('$(ADOFAIPath)')">
+    <MakeDir Directories="$(ModsPath)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsPath)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>
