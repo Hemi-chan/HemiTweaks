@@ -287,12 +287,22 @@ namespace HemiTweaks
             level.trackSettings["trackColorType"] = TrackColorType.Single;
         }
 
+        private static LevelData EditorLevel()
+        {
+            scnEditor editor = ADOBase.editor;
+            if (editor == null)
+                return null;
+
+            scnGame level = editor.customLevel;
+            return level == null ? null : level.levelData;
+        }
+
         internal static bool ShouldBlockSave()
         {
             if (!HemiTweaksMod.EffectRemoverBlockSave)
                 return false;
 
-            LevelData current = ADOBase.editor?.levelData;
+            LevelData current = EditorLevel();
             return current != null && strippedLevels.TryGetValue(current, out _);
         }
 
@@ -301,7 +311,7 @@ namespace HemiTweaks
             if (!ShouldBlockSave())
                 return false;
 
-            LevelData current = ADOBase.editor?.levelData;
+            LevelData current = EditorLevel();
             if (current != null && strippedLevels.TryGetValue(current, out StrippedMark mark) && !mark.BackupSkipLogged)
             {
                 mark.BackupSkipLogged = true;
@@ -340,17 +350,30 @@ namespace HemiTweaks
             return false;
         }
 
+        private static bool refreshFailureLogged;
+
         internal static void RefreshEditorButtons()
         {
             scnEditor editor = ADOBase.editor;
             if (editor == null)
                 return;
 
-            bool allowed = !ShouldBlockSave();
-            SetInteractable(editor.buttonSave, allowed);
-            SetInteractable(editor.buttonSaveAs, allowed);
-            SetInteractable(editor.popupUnsavedChangesSave, allowed);
-            SetInteractable(editor.popupSaveSaveAs, allowed);
+            try
+            {
+                bool allowed = !ShouldBlockSave();
+                SetInteractable(editor.buttonSave, allowed);
+                SetInteractable(editor.buttonSaveAs, allowed);
+                SetInteractable(editor.popupUnsavedChangesSave, allowed);
+                SetInteractable(editor.popupSaveSaveAs, allowed);
+            }
+            catch (Exception exception)
+            {
+                if (refreshFailureLogged)
+                    return;
+
+                refreshFailureLogged = true;
+                MelonLogger.Warning("Could not match the editor save controls to the Effect Remover: " + exception.Message);
+            }
         }
 
         private static void SetInteractable(Button button, bool value)
